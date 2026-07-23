@@ -1,0 +1,13 @@
+name = "finidc-register-api"
+main = "src/index.js"
+compatibility_date = "2026-07-23"
+
+[vars]
+APP_ENV = "development"
+ALLOWED_ORIGIN = "https://finidc.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "finidc-register"
+database_id = "REPLACE_WITH_CLOUDFLARE_D1_DATABASE_ID"
+migrations_dir = "migrations"
