@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="theme-color" content="#102a43" />
+    <title>FINIDC Registration Administration</title>
+    <link rel="stylesheet" href="/admin/admin.css" />
+    <script src="/admin/admin.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <div><strong>FINIDC</strong><small>Registration administration</small></div>
+      </div>
+      <div class="identity">
+        <span>Secure administrator</span>
+        <strong id="admin-email">Checking identity…</strong>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-heading">
+        <div>
+          <p>Private management area</p>
+          <h1>Community registrations</h1>
+          <span>Search, filter and export FINIDC participant information.</span>
+        </div>
+        <div class="heading-actions">
+          <button type="button" class="secondary" id="refresh-button">Refresh</button>
+          <button type="button" id="export-button">Export CSV for Excel</button>
+        </div>
+      </section>
+
+      <section class="stats" aria-label="Registration statistics">
+        <article><small>Total registrations</small><strong id="total-count">—</strong><span>All time</span></article>
+        <article><small>Registered this month</small><strong id="month-count">—</strong><span>Current calendar month</span></article>
+        <article class="summary"><small>Leading professions</small><div id="profession-summary">Loading…</div></article>
+        <article class="summary"><small>Leading cities</small><div id="city-summary">Loading…</div></article>
+      </section>
+
+      <section class="data-panel">
+        <form id="filter-form" class="filters">
+          <div class="search-field">
+            <label for="search">Search people</label>
+            <input id="search" type="search" placeholder="Name, phone, email or city" autocomplete="off" />
+          </div>
+          <div>
+            <label for="profession">Profession</label>
+            <select id="profession">
+              <option value="">All professions</option>
+              <option value="arts-music">Arts, music or dance</option>
+              <option value="business">Business, sales or entrepreneurship</option>
+              <option value="care-health">Care or healthcare</option>
+              <option value="construction">Construction or skilled trades</option>
+              <option value="education">Education or teaching</option>
+              <option value="engineering">Engineering or manufacturing</option>
+              <option value="hospitality">Hospitality, food or cleaning</option>
+              <option value="it">IT, AI or digital technology</option>
+              <option value="logistics">Driving, transport or logistics</option>
+              <option value="science">Mathematics, physics or sciences</option>
+              <option value="student">Student</option>
+              <option value="unemployed">Looking for work</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label for="city">City</label>
+            <input id="city" placeholder="All cities" autocomplete="off" />
+          </div>
+          <button type="submit">Apply filters</button>
+          <button type="button" class="text-button" id="clear-button">Clear</button>
+        </form>
+
+        <div id="status-message" class="status-message" role="status" aria-live="polite"></div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Person</th>
+                <th>Contact</th>
+                <th>Profession</th>
+                <th>City & language</th>
+                <th>Interests</th>
+                <th>Registered</th>
+              </tr>
+            </thead>
+            <tbody id="registration-rows"></tbody>
+          </table>
+        </div>
+
+        <div class="cards" id="registration-cards"></div>
+
+        <footer class="pagination">
+          <span id="result-count">—</span>
+          <div>
+            <button type="button" class="secondary" id="previous-page">Previous</button>
+            <span id="page-label">Page 1</span>
+            <button type="button" class="secondary" id="next-page">Next</button>
+          </div>
+        </footer>
+      </section>
+    </main>
+  </body>
+</html>

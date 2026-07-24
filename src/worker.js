@@ -24,6 +24,12 @@ function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
 }
 
+function adminJson(data, status = 200) {
+  const response = json(data, status);
+  response.headers.set("x-robots-tag", "noindex, nofollow, noarchive");
+  return response;
+}
+
 function clean(value, maximum) {
   return String(value ?? "").trim().slice(0, maximum);
 }
@@ -131,6 +137,201 @@ async function register(request, env) {
   });
 }
 
+function adminIdentity(request, env) {
+  const expectedHost = clean(env.ADMIN_HOST, 253).toLowerCase();
+  const expectedEmail = clean(env.ADMIN_EMAIL, 160).toLowerCase();
+  const requestHost = new URL(request.url).hostname.toLowerCase();
+  const accessEmail = clean(
+    request.headers.get("cf-access-authenticated-user-email"),
+    160
+  ).toLowerCase();
+
+  if (
+    !expectedHost ||
+    !expectedEmail ||
+    expectedEmail === "__disabled__" ||
+    requestHost !== expectedHost ||
+    accessEmail !== expectedEmail
+  ) {
+    return null;
+  }
+
+  return { email: accessEmail };
+}
+
+function adminDenied() {
+  return adminJson(
+    {
+      ok: false,
+      error:
+        "Administrator access is not available. Sign in through the protected FINIDC admin address.",
+    },
+    403
+  );
+}
+
+function filtersFromUrl(url) {
+  return {
+    q: clean(url.searchParams.get("q"), 100),
+    profession: clean(url.searchParams.get("profession"), 40),
+    city: clean(url.searchParams.get("city"), 80),
+  };
+}
+
+function filteredQuery(filters) {
+  const conditions = [];
+  const values = [];
+
+  if (filters.q) {
+    conditions.push(
+      "(name LIKE ? OR email LIKE ? OR phone LIKE ? OR city LIKE ? OR profession_other LIKE ?)"
+    );
+    const value = `%${filters.q}%`;
+    values.push(value, value, value, value, value);
+  }
+
+  if (filters.profession) {
+    conditions.push("profession = ?");
+    values.push(filters.profession);
+  }
+
+  if (filters.city) {
+    conditions.push("city LIKE ?");
+    values.push(`%${filters.city}%`);
+  }
+
+  return {
+    where: conditions.length ? `WHERE ${conditions.join(" AND ")}` : "",
+    values,
+  };
+}
+
+async function adminStats(env) {
+  const [total, thisMonth, professions, cities] = await Promise.all([
+    env.DB.prepare("SELECT COUNT(*) AS count FROM registrations").first(),
+    env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM registrations WHERE created_at >= datetime('now', 'start of month')"
+    ).first(),
+    env.DB.prepare(
+      `SELECT profession AS label, COUNT(*) AS count
+       FROM registrations
+       GROUP BY profession
+       ORDER BY count DESC, profession ASC
+       LIMIT 8`
+    ).all(),
+    env.DB.prepare(
+      `SELECT city AS label, COUNT(*) AS count
+       FROM registrations
+       WHERE city IS NOT NULL AND city != ''
+       GROUP BY city
+       ORDER BY count DESC, city ASC
+       LIMIT 8`
+    ).all(),
+  ]);
+
+  return adminJson({
+    ok: true,
+    total: Number(total?.count || 0),
+    thisMonth: Number(thisMonth?.count || 0),
+    professions: professions.results || [],
+    cities: cities.results || [],
+  });
+}
+
+async function adminRegistrations(url, env) {
+  const filters = filtersFromUrl(url);
+  const page = Math.max(1, Math.min(100000, Number(url.searchParams.get("page")) || 1));
+  const perPage = Math.max(
+    10,
+    Math.min(100, Number(url.searchParams.get("perPage")) || 25)
+  );
+  const offset = (page - 1) * perPage;
+  const query = filteredQuery(filters);
+
+  const countStatement = env.DB.prepare(
+    `SELECT COUNT(*) AS count FROM registrations ${query.where}`
+  ).bind(...query.values);
+  const rowsStatement = env.DB.prepare(
+    `SELECT id, name, phone, email, profession, profession_other, city, interests,
+            language, consented_at, created_at, updated_at
+     FROM registrations
+     ${query.where}
+     ORDER BY created_at DESC
+     LIMIT ? OFFSET ?`
+  ).bind(...query.values, perPage, offset);
+
+  const [count, rows] = await Promise.all([countStatement.first(), rowsStatement.all()]);
+  const total = Number(count?.count || 0);
+
+  return adminJson({
+    ok: true,
+    registrations: rows.results || [],
+    page,
+    perPage,
+    total,
+    pages: Math.max(1, Math.ceil(total / perPage)),
+  });
+}
+
+function csvCell(value) {
+  const text = String(value ?? "").replace(/\r?\n/g, " ");
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+async function adminExport(url, env) {
+  const query = filteredQuery(filtersFromUrl(url));
+  const rows = await env.DB.prepare(
+    `SELECT name, phone, email, profession, profession_other, city, interests,
+            language, consented_at, created_at
+     FROM registrations
+     ${query.where}
+     ORDER BY created_at DESC
+     LIMIT 10000`
+  )
+    .bind(...query.values)
+    .all();
+
+  const headings = [
+    "Name",
+    "Phone",
+    "Email",
+    "Profession",
+    "Profession details",
+    "City",
+    "Interests",
+    "Language",
+    "Consent date",
+    "Registration date",
+  ];
+  const fields = [
+    "name",
+    "phone",
+    "email",
+    "profession",
+    "profession_other",
+    "city",
+    "interests",
+    "language",
+    "consented_at",
+    "created_at",
+  ];
+  const lines = [
+    headings.map(csvCell).join(","),
+    ...(rows.results || []).map((row) => fields.map((field) => csvCell(row[field])).join(",")),
+  ];
+  const date = new Date().toISOString().slice(0, 10);
+
+  return new Response(`\uFEFF${lines.join("\r\n")}`, {
+    headers: {
+      "content-type": "text/csv; charset=utf-8",
+      "content-disposition": `attachment; filename="finidc-registrations-${date}.csv"`,
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+      "x-robots-tag": "noindex, nofollow, noarchive",
+    },
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -143,8 +344,51 @@ export default {
       return register(request, env);
     }
 
+    if (url.pathname.startsWith("/api/admin/")) {
+      const identity = adminIdentity(request, env);
+      if (!identity) return adminDenied();
+
+      try {
+        if (url.pathname === "/api/admin/session" && request.method === "GET") {
+          return adminJson({ ok: true, email: identity.email });
+        }
+        if (url.pathname === "/api/admin/stats" && request.method === "GET") {
+          return adminStats(env);
+        }
+        if (url.pathname === "/api/admin/registrations" && request.method === "GET") {
+          return adminRegistrations(url, env);
+        }
+        if (url.pathname === "/api/admin/export" && request.method === "GET") {
+          return adminExport(url, env);
+        }
+      } catch (error) {
+        console.error("Admin database error", error);
+        return adminJson(
+          { ok: false, error: "The admin database request could not be completed." },
+          500
+        );
+      }
+
+      return adminJson({ ok: false, error: "Not found." }, 404);
+    }
+
     if (url.pathname.startsWith("/api/")) {
       return json({ ok: false, error: "Not found." }, 404);
+    }
+
+    if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
+      if (!adminIdentity(request, env)) return adminDenied();
+      const assetUrl = new URL(request.url);
+      assetUrl.pathname =
+        url.pathname === "/admin" || url.pathname === "/admin/"
+          ? "/admin/index.html"
+          : url.pathname;
+      const response = await env.ASSETS.fetch(new Request(assetUrl, request));
+      const headers = new Headers(response.headers);
+      headers.set("cache-control", "no-store");
+      headers.set("x-robots-tag", "noindex, nofollow, noarchive");
+      headers.set("x-frame-options", "DENY");
+      return new Response(response.body, { status: response.status, headers });
     }
 
     const response = await env.ASSETS.fetch(request);
