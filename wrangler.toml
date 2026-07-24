@@ -1,0 +1,13 @@
+name = "finidc-register-api"
+main = "src/index.js"
+compatibility_date = "2026-07-23"
+
+[vars]
+APP_ENV = "development"
+ALLOWED_ORIGIN = "https://finidc.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "finidc-register"
+database_id = "af6589d2-4736-4479-a717-99b20dc6bb3f"
+migrations_dir = "migrations"
