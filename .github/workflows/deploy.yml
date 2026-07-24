@@ -12,6 +12,12 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/deploy.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/deploy-production-test"
+      - ".github/workflows/deploy.yml"
 
 permissions:
   contents: read
