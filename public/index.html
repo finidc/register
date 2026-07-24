@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Register your interest in FINIDC community programmes, activities and volunteering in Finland."
+    />
+    <meta name="theme-color" content="#102a43" />
+    <title>Join FINIDC | Community Registration</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="https://www.finidc.org" aria-label="FINIDC home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>
+          <strong>FINIDC</strong>
+          <small>Finnish Association for Interdisciplinary Cooperation ry</small>
+        </span>
+      </a>
+      <a class="home-link" href="https://www.finidc.org">Visit finidc.org</a>
+    </header>
+
+    <main>
+      <section class="intro">
+        <div class="eyebrow">We live here. We care here. We love Finland.</div>
+        <h1>Find your place in a warmer community.</h1>
+        <p class="lead">
+          Meet people, share your skills and join practical activities in Espoo,
+          Helsinki and across Finland. Registration is free and takes about two minutes.
+        </p>
+        <div class="benefits" aria-label="Programme benefits">
+          <div><span>01</span><strong>Community</strong><small>Friendly local meetings</small></div>
+          <div><span>02</span><strong>Skills</strong><small>Ideas and opportunities</small></div>
+          <div><span>03</span><strong>Belonging</strong><small>Finns and newcomers together</small></div>
+        </div>
+        <aside class="meeting-note">
+          <strong>Regular community meetings</strong>
+          <span>Wednesdays & Sundays · 14:00–16:00 · Kilo, Espoo</span>
+          <span>Free coffee and snacks</span>
+        </aside>
+      </section>
+
+      <section class="form-panel" aria-labelledby="form-title">
+        <div class="form-heading">
+          <p>Community registration</p>
+          <h2 id="form-title">Tell us a little about you</h2>
+          <span>Fields marked * are required.</span>
+        </div>
+
+        <form id="registration-form" novalidate>
+          <div class="field">
+            <label for="name">Full name *</label>
+            <input id="name" name="name" autocomplete="name" maxlength="100" required />
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="phone">Phone number</label>
+              <input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="40" placeholder="+358" />
+            </div>
+            <div class="field">
+              <label for="email">Email address</label>
+              <input id="email" name="email" type="email" autocomplete="email" maxlength="160" />
+            </div>
+          </div>
+          <p class="field-help">Please provide at least a phone number or email address.</p>
+
+          <div class="field">
+            <label for="profession">Profession or current situation *</label>
+            <select id="profession" name="profession" required>
+              <option value="">Choose one</option>
+              <option value="arts-music">Arts, music or dance</option>
+              <option value="business">Business, sales or entrepreneurship</option>
+              <option value="care-health">Care or healthcare</option>
+              <option value="construction">Construction or skilled trades</option>
+              <option value="education">Education or teaching</option>
+              <option value="engineering">Engineering or manufacturing</option>
+              <option value="hospitality">Hospitality, food or cleaning services</option>
+              <option value="it">IT, AI or digital technology</option>
+              <option value="logistics">Driving, transport or logistics</option>
+              <option value="science">Mathematics, physics or other sciences</option>
+              <option value="student">Student</option>
+              <option value="unemployed">Looking for work</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div class="field hidden" id="profession-other-field">
+            <label for="profession-other">Please describe</label>
+            <input id="profession-other" name="professionOther" maxlength="100" />
+          </div>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="city">City</label>
+              <input id="city" name="city" autocomplete="address-level2" maxlength="80" placeholder="Espoo" />
+            </div>
+            <div class="field">
+              <label for="language">Preferred language(s)</label>
+              <input id="language" name="language" maxlength="80" placeholder="English, Finnish…" />
+            </div>
+          </div>
+
+          <fieldset>
+            <legend>I am interested in</legend>
+            <div class="choice-grid">
+              <label><input type="checkbox" name="interests" value="community-meetings" /><span>Community meetings</span></label>
+              <label><input type="checkbox" name="interests" value="nature-garden" /><span>Nature & community garden</span></label>
+              <label><input type="checkbox" name="interests" value="skills-work" /><span>Skills & work activities</span></label>
+              <label><input type="checkbox" name="interests" value="volunteering" /><span>Volunteering</span></label>
+            </div>
+          </fieldset>
+
+          <div class="honeypot" aria-hidden="true">
+            <label for="website">Website</label>
+            <input id="website" name="website" tabindex="-1" autocomplete="off" />
+          </div>
+
+          <label class="consent">
+            <input id="consent" name="consent" type="checkbox" required />
+            <span>
+              I agree that FINIDC may store these details and contact me about its
+              community activities. My information will not be displayed publicly. *
+            </span>
+          </label>
+
+          <div id="form-message" class="form-message" role="status" aria-live="polite"></div>
+          <button type="submit">
+            <span>Send my registration</span>
+            <b aria-hidden="true">→</b>
+          </button>
+          <p class="privacy-note">
+            FINIDC uses this information only to organise activities and communicate
+            with participants. To request correction or deletion, contact
+            <a href="mailto:info@finidc.org">info@finidc.org</a>.
+          </p>
+        </form>
+
+        <div id="success-panel" class="success-panel hidden" tabindex="-1">
+          <div class="success-icon" aria-hidden="true">✓</div>
+          <p>Registration received</p>
+          <h2>Welcome to the FINIDC community.</h2>
+          <span>Thank you. We will contact you when a suitable activity is available.</span>
+          <button type="button" id="register-another">Register another person</button>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Finnish Association for Interdisciplinary Cooperation ry</span>
+      <span>Registration No. 3640037-2 · Espoo, Finland</span>
+    </footer>
+  </body>
+</html>
