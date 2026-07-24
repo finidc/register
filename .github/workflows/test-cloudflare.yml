@@ -12,6 +12,7 @@ on:
       - main
     paths:
       - .github/cloudflare-connection-test
+      - .github/workflows/test-cloudflare.yml
 
 permissions:
   contents: read
@@ -39,18 +40,18 @@ jobs:
           fi
           echo "Required GitHub secrets are available."
 
-      - name: Verify API token
+      - name: Verify account API token
         shell: bash
         run: |
           response_file="$(mktemp)"
-          http_code="$(curl --silent --show-error --output "$response_file" --write-out "%{http_code}" --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" --header "Content-Type: application/json" "https://api.cloudflare.com/client/v4/user/tokens/verify")"
+          http_code="$(curl --silent --show-error --output "$response_file" --write-out "%{http_code}" --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" --header "Content-Type: application/json" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/tokens/verify")"
           if [[ "$http_code" != "200" ]] || [[ "$(jq -r '.success' "$response_file")" != "true" ]]; then
             message="$(jq -r '.errors[0].message // "Unknown Cloudflare API error"' "$response_file")"
-            echo "::error::Cloudflare token verification failed (HTTP $http_code): $message"
+            echo "::error::Cloudflare account token verification failed (HTTP $http_code): $message"
             exit 1
           fi
           status="$(jq -r '.result.status // "unknown"' "$response_file")"
-          echo "Cloudflare API token is valid. Status: $status"
+          echo "Cloudflare account API token is valid. Status: $status"
 
       - name: Verify account access
         shell: bash
