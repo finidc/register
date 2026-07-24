@@ -113,3 +113,32 @@ jobs:
 
       - name: Deploy to Cloudflare
         run: npx wrangler deploy --config=./wrangler.generated.json
+
+      - name: Test live registration and clean test record
+        shell: bash
+        run: |
+          base_url="https://finidc-register.ngo358fin.workers.dev"
+
+          health="$(curl --fail-with-body --silent --show-error --retry 5 --retry-delay 2 "$base_url/api/health")"
+          if [[ "$(jq -r '.ok' <<< "$health")" != "true" ]]; then
+            echo "::error::The deployed health check failed."
+            exit 1
+          fi
+
+          result="$(curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --data '{"name":"FINIDC Deployment Test","email":"deployment-test@finidc.invalid","phone":"","profession":"it","professionOther":"","city":"Espoo","language":"English","interests":["community-meetings"],"website":"","consent":true}' \
+            "$base_url/api/register")"
+
+          if [[ "$(jq -r '.ok' <<< "$result")" != "true" ]]; then
+            echo "::error::The deployed registration test failed."
+            exit 1
+          fi
+
+          npx wrangler d1 execute finidc-register-db \
+            --remote \
+            --command="DELETE FROM registrations WHERE email = 'deployment-test@finidc.invalid';" \
+            --config=./wrangler.generated.json
+
+          echo "Live health check, registration write, and cleanup succeeded."
