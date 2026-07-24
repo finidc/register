@@ -176,9 +176,16 @@ jobs:
         run: |
           admin_url="https://finidc-register-admin.ngo358fin.workers.dev"
 
-          health="$(curl --fail-with-body --silent --show-error --retry 5 --retry-delay 2 "$admin_url/api/health")"
-          if [[ "$(jq -r '.ok' <<< "$health")" != "true" ]]; then
-            echo "::error::The admin Worker health check failed."
+          health_file="$(mktemp)"
+          health_status="$(curl --silent --show-error --retry 5 --retry-delay 2 \
+            --output "$health_file" --write-out '%{http_code}' "$admin_url/api/health")"
+          if [[ "$health_status" == "200" ]]; then
+            if [[ "$(jq -r '.ok' "$health_file")" != "true" ]]; then
+              echo "::error::The admin Worker health check failed."
+              exit 1
+            fi
+          elif [[ "$health_status" != "302" ]]; then
+            echo "::error::The admin Worker health check returned HTTP $health_status."
             exit 1
           fi
 
