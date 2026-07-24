@@ -381,7 +381,7 @@ export default {
       const assetUrl = new URL(request.url);
       assetUrl.pathname =
         url.pathname === "/admin" || url.pathname === "/admin/"
-          ? "/admin/index.html"
+          ? "/admin/"
           : url.pathname;
       const response = await env.ASSETS.fetch(new Request(assetUrl, request));
       const headers = new Headers(response.headers);
