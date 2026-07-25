@@ -74,6 +74,22 @@ function validate(data) {
 }
 
 async function register(request, env) {
+  const clientAddress = request.headers.get("cf-connecting-ip") || "unknown";
+  const rateLimit = await env.REGISTRATION_RATE_LIMITER.limit({
+    key: `registration:${clientAddress}`,
+  });
+  if (!rateLimit.success) {
+    const response = json(
+      {
+        ok: false,
+        error: "Too many registration attempts. Please wait one minute and try again.",
+      },
+      429
+    );
+    response.headers.set("retry-after", "60");
+    return response;
+  }
+
   const contentType = request.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) {
     return json({ ok: false, error: "Expected a JSON request." }, 415);
@@ -274,7 +290,8 @@ async function adminRegistrations(url, env) {
 }
 
 function csvCell(value) {
-  const text = String(value ?? "").replace(/\r?\n/g, " ");
+  let text = String(value ?? "").replace(/\r?\n/g, " ");
+  if (/^[=+\-@]/.test(text)) text = `'${text}`;
   return `"${text.replace(/"/g, '""')}"`;
 }
 
@@ -401,5 +418,15 @@ export default {
       "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
     );
     return new Response(response.body, { status: response.status, headers });
+  },
+
+  async scheduled(_event, env, ctx) {
+    ctx.waitUntil(
+      env.DB.prepare(
+        "DELETE FROM registrations WHERE created_at < datetime('now', '-12 months')"
+      )
+        .run()
+        .catch((error) => console.error("Registration retention cleanup error", error))
+    );
   },
 };
