@@ -73,6 +73,63 @@ function validate(data) {
   return { registration };
 }
 
+async function verifyTurnstile(request, data, env) {
+  const secret = clean(env.TURNSTILE_SECRET_KEY, 2048);
+  const siteKey = clean(env.TURNSTILE_SITE_KEY, 256);
+  const token = clean(data.turnstileToken, 2048);
+
+  if (!secret || !siteKey) {
+    return {
+      ok: false,
+      status: 503,
+      error: "Security verification is temporarily unavailable. Please try again shortly.",
+    };
+  }
+  if (!token) {
+    return { ok: false, status: 400, error: "Please complete the security check." };
+  }
+
+  const body = new FormData();
+  body.set("secret", secret);
+  body.set("response", token);
+  const clientAddress = request.headers.get("cf-connecting-ip");
+  if (clientAddress) body.set("remoteip", clientAddress);
+
+  try {
+    const response = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      { method: "POST", body }
+    );
+    if (!response.ok) throw new Error(`Turnstile Siteverify returned ${response.status}.`);
+
+    const verification = await response.json();
+    const expectedHostname = new URL(request.url).hostname.toLowerCase();
+    const verifiedHostname = clean(verification.hostname, 253).toLowerCase();
+    const verifiedAction = clean(verification.action, 100);
+
+    if (
+      verification.success !== true ||
+      verifiedHostname !== expectedHostname ||
+      verifiedAction !== "registration"
+    ) {
+      return {
+        ok: false,
+        status: 400,
+        error: "Security verification failed. Please try again.",
+      };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    console.error("Turnstile verification error", error);
+    return {
+      ok: false,
+      status: 503,
+      error: "Security verification is temporarily unavailable. Please try again shortly.",
+    };
+  }
+}
+
 async function register(request, env) {
   const clientAddress = request.headers.get("cf-connecting-ip") || "unknown";
   const rateLimit = await env.REGISTRATION_RATE_LIMITER.limit({
@@ -108,6 +165,11 @@ async function register(request, env) {
 
   const result = validate(data);
   if (result.error) return json({ ok: false, error: result.error }, 400);
+
+  const verification = await verifyTurnstile(request, data, env);
+  if (!verification.ok) {
+    return json({ ok: false, error: verification.error }, verification.status);
+  }
 
   const r = result.registration;
   try {
@@ -415,9 +477,25 @@ export default {
     headers.set("referrer-policy", "strict-origin-when-cross-origin");
     headers.set(
       "content-security-policy",
-      "default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+      "default-src 'self'; style-src 'self'; script-src 'self' https://challenges.cloudflare.com; img-src 'self' data:; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
     );
-    return new Response(response.body, { status: response.status, headers });
+    const securedResponse = new Response(response.body, {
+      status: response.status,
+      headers,
+    });
+    if (
+      (headers.get("content-type") || "").includes("text/html") &&
+      clean(env.TURNSTILE_SITE_KEY, 256)
+    ) {
+      return new HTMLRewriter()
+        .on("[data-turnstile-sitekey]", {
+          element(element) {
+            element.setAttribute("data-sitekey", clean(env.TURNSTILE_SITE_KEY, 256));
+          },
+        })
+        .transform(securedResponse);
+    }
+    return securedResponse;
   },
 
   async scheduled(_event, env, ctx) {
