@@ -38,11 +38,17 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  const data = new FormData(form);
+  const turnstileToken = data.get("cf-turnstile-response");
+  if (!turnstileToken) {
+    formMessage.textContent = "Please complete the security check.";
+    return;
+  }
+
   const submitButton = form.querySelector('button[type="submit"]');
   submitButton.disabled = true;
   submitButton.querySelector("span").textContent = "Sending securely…";
 
-  const data = new FormData(form);
   const payload = {
     name: data.get("name"),
     phone: data.get("phone"),
@@ -54,6 +60,7 @@ form.addEventListener("submit", async (event) => {
     interests: data.getAll("interests"),
     website: data.get("website"),
     consent: data.get("consent") === "on",
+    turnstileToken,
   };
 
   try {
@@ -71,6 +78,7 @@ form.addEventListener("submit", async (event) => {
     successPanel.focus();
   } catch (error) {
     formMessage.textContent = error.message || "Something went wrong. Please try again.";
+    window.turnstile?.reset();
   } finally {
     submitButton.disabled = false;
     submitButton.querySelector("span").textContent = "Send my registration";
@@ -88,5 +96,6 @@ registerAnother.addEventListener("click", () => {
   document.querySelector(".form-heading").classList.remove("hidden");
   successPanel.classList.add("hidden");
   formMessage.textContent = "";
+  window.turnstile?.reset();
   form.elements.name.focus();
 });
