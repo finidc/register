@@ -35,6 +35,8 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       FINIDC_ADMIN_EMAIL: ${{ secrets.FINIDC_ADMIN_EMAIL }}
+      TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+      TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
 
     steps:
       - name: Check out repository
@@ -90,6 +92,11 @@ jobs:
         env:
           DATABASE_ID: ${{ steps.database.outputs.database_id }}
         run: |
+          if [[ -z "$TURNSTILE_SITE_KEY" || -z "$TURNSTILE_SECRET_KEY" ]]; then
+            echo "::error::Turnstile configuration is missing."
+            exit 1
+          fi
+
           admin_email="${FINIDC_ADMIN_EMAIL:-__disabled__}"
           create_config() {
             worker_name="$1"
@@ -102,6 +109,7 @@ jobs:
             --arg admin_email "$admin_email" \
             --arg worker_name "$worker_name" \
             --arg admin_host "$admin_host" \
+            --arg turnstile_site_key "$TURNSTILE_SITE_KEY" \
             --argjson scheduled_cleanup "$scheduled_cleanup" \
             '{
               "$schema": "node_modules/wrangler/config-schema.json",
@@ -115,7 +123,8 @@ jobs:
               },
               "vars": {
                 "ADMIN_HOST": $admin_host,
-                "ADMIN_EMAIL": $admin_email
+                "ADMIN_EMAIL": $admin_email,
+                "TURNSTILE_SITE_KEY": $turnstile_site_key
               },
               "d1_databases": [{
                 "binding": "DB",
@@ -159,7 +168,13 @@ jobs:
       - name: Deploy protected admin Worker
         run: npx wrangler deploy --config=./wrangler.admin.generated.json
 
-      - name: Test live registration and clean test record
+      - name: Install Turnstile secret on public Worker
+        run: printf '%s' "$TURNSTILE_SECRET_KEY" | npx wrangler secret put TURNSTILE_SECRET_KEY --config=./wrangler.public.generated.json
+
+      - name: Install Turnstile secret on admin Worker
+        run: printf '%s' "$TURNSTILE_SECRET_KEY" | npx wrangler secret put TURNSTILE_SECRET_KEY --config=./wrangler.admin.generated.json
+
+      - name: Test live health and Turnstile fail-closed behavior
         shell: bash
         run: |
           base_url="https://finidc-register.ngo358fin.workers.dev"
@@ -170,23 +185,20 @@ jobs:
             exit 1
           fi
 
-          result="$(curl --fail-with-body --silent --show-error \
+          result_file="$(mktemp)"
+          status="$(curl --silent --show-error \
+            --output "$result_file" --write-out '%{http_code}' \
             --request POST \
             --header "Content-Type: application/json" \
             --data '{"name":"FINIDC Deployment Test","email":"deployment-test@finidc.invalid","phone":"","profession":"it","professionOther":"","city":"Espoo","language":"English","interests":["community-meetings"],"website":"","consent":true}' \
             "$base_url/api/register")"
 
-          if [[ "$(jq -r '.ok' <<< "$result")" != "true" ]]; then
-            echo "::error::The deployed registration test failed."
+          if [[ "$status" != "400" || "$(jq -r '.ok' "$result_file")" != "false" ]]; then
+            echo "::error::Registration did not fail closed without a Turnstile token (HTTP $status)."
             exit 1
           fi
 
-          npx wrangler d1 execute finidc-register-db \
-            --remote \
-            --command="DELETE FROM registrations WHERE email = 'deployment-test@finidc.invalid';" \
-            --config=./wrangler.public.generated.json
-
-          echo "Live health check, registration write, and cleanup succeeded."
+          echo "Live health check and fail-closed Turnstile verification succeeded."
 
       - name: Test admin Worker boundary
         shell: bash
