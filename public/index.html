@@ -10,6 +10,7 @@
     <meta name="theme-color" content="#102a43" />
     <title>Join FINIDC | Community Registration</title>
     <link rel="stylesheet" href="/styles.css" />
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
     <script src="/app.js" defer></script>
   </head>
   <body>
@@ -118,6 +119,16 @@
           <div class="honeypot" aria-hidden="true">
             <label for="website">Website</label>
             <input id="website" name="website" tabindex="-1" autocomplete="off" />
+          </div>
+
+          <div class="turnstile-wrap">
+            <div
+              class="cf-turnstile"
+              data-turnstile-sitekey
+              data-sitekey=""
+              data-action="registration"
+              data-theme="light"
+            ></div>
           </div>
 
           <label class="consent">
