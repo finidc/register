@@ -289,6 +289,12 @@ button b { font-size: 1.35rem; }
 .privacy-card a { color: var(--navy); }
 .privacy-card address { font-style: normal; line-height: 1.7; }
 
+.turnstile-wrap {
+  min-height: 65px;
+  margin: 4px 0 20px;
+  overflow: hidden;
+}
+
 .success-panel { padding: 90px 10px; text-align: center; }
 .success-icon {
   width: 64px;
