@@ -214,6 +214,7 @@ fieldset { margin: 4px 0 24px; padding: 0; border: 0; }
 }
 
 .consent input { margin-top: 3px; flex: 0 0 auto; }
+.consent a { color: var(--navy); text-underline-offset: 3px; }
 
 button {
   width: 100%;
@@ -239,6 +240,54 @@ button b { font-size: 1.35rem; }
 .form-message { min-height: 22px; margin-bottom: 8px; color: var(--red); font-size: 0.82rem; font-weight: 700; }
 .privacy-note { margin: 15px 0 0; color: var(--muted); font-size: 0.72rem; line-height: 1.55; }
 .privacy-note a { color: var(--navy); }
+
+.privacy-page {
+  width: min(900px, calc(100% - 40px));
+  margin: 28px auto 54px;
+  display: block;
+}
+
+.privacy-card {
+  padding: 48px;
+  background: var(--paper);
+  border: 1px solid rgba(16, 42, 67, 0.08);
+  border-top: 4px solid var(--red);
+  box-shadow: var(--shadow);
+}
+
+.privacy-card h1 {
+  margin: 8px 0 14px;
+  font-size: clamp(2.6rem, 7vw, 4.6rem);
+}
+
+.privacy-card .effective-date {
+  margin: 0 0 36px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.privacy-card section {
+  padding: 24px 0;
+  border-top: 1px solid var(--line);
+}
+
+.privacy-card h2 {
+  margin: 0 0 12px;
+  color: var(--navy);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+
+.privacy-card p,
+.privacy-card li {
+  color: #425568;
+  line-height: 1.7;
+}
+
+.privacy-card ul { padding-left: 22px; }
+.privacy-card a { color: var(--navy); }
+.privacy-card address { font-style: normal; line-height: 1.7; }
 
 .success-panel { padding: 90px 10px; text-align: center; }
 .success-icon {
@@ -291,6 +340,8 @@ footer {
   .benefits div { min-height: 100px; padding: 13px 7px; }
   .benefits small { font-size: 0.68rem; }
   .form-panel { min-height: 0; padding: 29px 20px; border-radius: 2px; }
+  .privacy-page { width: min(100% - 28px, 900px); margin-top: 14px; }
+  .privacy-card { padding: 30px 20px; }
   .form-heading h2 { font-size: 1.7rem; }
   .field-grid, .choice-grid { grid-template-columns: 1fr; gap: 0; }
   .field-grid .field { margin-bottom: 18px; }
